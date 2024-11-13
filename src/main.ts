@@ -2,16 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
-import {
-  initializeTransactionalContext,
-  StorageDriver,
-} from 'typeorm-transactional';
 
 async function bootstrap() {
-  initializeTransactionalContext({
-    storageDriver: StorageDriver.ASYNC_LOCAL_STORAGE,
-  });
-
   const app = await NestFactory.create(AppModule);
 
   const origin = process.env.CORS_ORIGIN_WHITELIST;
@@ -25,7 +17,7 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('API - Layered Architecture')
+    .setTitle('API - Hexagonal Architecture')
     .setDescription('NESTJS API by Rafael Azevedo.')
     .setVersion('1.0')
     .addBearerAuth()

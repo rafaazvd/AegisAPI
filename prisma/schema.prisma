@@ -1,0 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  phone          String?
+  password       String
+  active         Boolean @default(false)
+  role           UserRole
+  avatar         String?  // Campo opcional para avatar
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  operators      Operator[]
+  ticketTimelines      TicketTimeline[]
+  tickets        Ticket[]
+  chats          Chat[]   // Relacionamento com Chat
+  meetings       Meeting[] // Relacionamento com Meeting
+}
+
+model Operator {
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  phone          String?
+  status         OperatorStatus
+  cashIn         Float
+  cashOut        Float
+  avatar         String?  // Campo opcional para avatar
+  transactions   Transaction[]
+  tickets        Ticket[]
+  commissions    Commission[]
+  activityHistories ActivityHistory[] // Relacionamento com ActivityHistory
+  withdrawalRequests WithdrawalRequest[] // Relacionamento com WithdrawalRequest
+  chats          Chat[]  // Relacionamento com Chat
+  meetings       Meeting[] // Relacionamento com Meeting
+  managerId      String
+  manager        User     @relation(fields: [managerId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Chat {
+  id            String   @id @default(cuid())
+  operatorId    String   // Relaciona com Operator
+  managerId     String   // Relaciona com User
+  createdAt     DateTime @default(now())
+  operator      Operator @relation(fields: [operatorId], references: [id])
+  manager       User     @relation(fields: [managerId], references: [id])
+  messages      Message[] // Relacionamento com Message
+}
+
+model Message {
+  id            String   @id @default(cuid())
+  chatId        String   // Relaciona com Chat
+  senderType    String   // Tipo de remetente: 'operator' ou 'manager'
+  sender        String   // ID do remetente (pode ser User ou Operator)
+  avatar        String?  // Avatar opcional do remetente
+  name          String   // Nome do remetente
+  text          String   // Texto da mensagem
+  sentAt        DateTime // Data e hora do envio
+  createdAt     DateTime @default(now())
+  
+  chat          Chat     @relation(fields: [chatId], references: [id])
+}
+
+model Ticket {
+  id             String   @id @default(cuid())
+  operatorId     String
+  managerId      String?
+  description    String
+  status         TicketStatus
+  type           TicketType // Tipo de ticket (ajuste de taxa ou suporte)
+  justification  String?    // Justificativa (para ajuste de taxa)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  operator       Operator  @relation(fields: [operatorId], references: [id])
+  manager        User?     @relation(fields: [managerId], references: [id])
+  ticketTimeline TicketTimeline[] // Linha do tempo do ticket
+}
+
+model TicketTimeline {
+  id            String   @id @default(cuid())
+  ticketId      String   // Relaciona com Ticket
+  action        String   // Ação realizada (comentário, mudança de status, etc.)
+  actorId       String   // ID do gerente ou operador que realizou a ação
+  comment       String?  // Comentário opcional
+  createdAt     DateTime @default(now())
+  ticket        Ticket   @relation(fields: [ticketId], references: [id])
+  actor         User     @relation(fields: [actorId], references: [id])
+}
+
+model Commission {
+  id             String   @id @default(cuid())
+  operatorId     String
+  amount         Float
+  status         CommissionStatus
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  operator       Operator @relation(fields: [operatorId], references: [id])
+}
+
+model Transaction {
+  id             String   @id @default(cuid())
+  operatorId     String
+  type           TransactionType // 'CASH_IN' ou 'CASH_OUT'
+  amount         Float
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  operator       Operator @relation(fields: [operatorId], references: [id])
+}
+
+model ActivityHistory {
+  id            String    @id @default(uuid()) // Usando UUID como ID
+  operatorId    String    // Referência ao operador que realizou a ação
+  actionType    String    // Tipo de ação (saque, depósito, abertura de ticket, etc.)
+  amount        Float?    // Valor envolvido na ação (aplicável para saques e depósitos)
+  createdAt     DateTime  @default(now()) // Data e hora da ação
+  description   String?   // Descrição adicional da ação
+
+  operator      Operator  @relation(fields: [operatorId], references: [id])
+}
+
+model WithdrawalRequest {
+  id              String    @id @default(uuid()) // Usando UUID como ID
+  operatorId      String    // Referência ao operador que solicita o saque
+  amount          Float     // Valor solicitado para saque
+  status          String    // Status da solicitação (pendente, aprovado, pago)
+  createdAt       DateTime  @default(now()) // Data e hora da solicitação
+  updatedAt       DateTime  @updatedAt // Data da última atualização do status
+
+  operator        Operator  @relation(fields: [operatorId], references: [id])
+}
+
+model Meeting {
+  id              String    @id @default(cuid())
+  operatorId      String    // Referência ao operador
+  managerId       String    // Referência ao gerente (manager)
+  subject         String    // Assunto da reunião
+  scheduledAt     DateTime  // Data e hora da reunião
+  createdAt       DateTime  @default(now())
+
+  operator        Operator  @relation(fields: [operatorId], references: [id])
+  manager         User      @relation(fields: [managerId], references: [id])
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  OPERATOR
+}
+
+enum OperatorStatus {
+  ACTIVE
+  PENDING
+  BLOCKED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+enum TransactionType {
+  CASH_IN
+  CASH_OUT
+}
+
+enum TicketType {
+  TAX_ADJUSTMENT
+  SUPPORT
+}

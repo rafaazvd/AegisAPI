@@ -1,24 +1,54 @@
-import { DataSource, Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
-import { User } from './entities/user.entity';
+import { PrismaClient, User } from '@prisma/client';
 import { CreateUserDto } from './dto/CreateUser.dto';
 
 @Injectable()
-export class UserRepository extends Repository<User> {
-  constructor(dataSource: DataSource) {
-    super(User, dataSource.createEntityManager());
-  }
+export class UserRepository {
+  constructor(private readonly prisma: PrismaClient) {}
 
   async createUser(user: CreateUserDto) {
-    const userResult = await this.save(user);
+    const userResult = await this.prisma.user.create({
+      data: user,
+    });
     return userResult;
   }
 
-  async findOneByEmail(email: string) {
-    const query = this.createQueryBuilder('u')
-      .select(['u.id', 'u.email', 'u.cpf', 'u.name', 'u.password'])
-      .where('u.email = :email', { email: email });
+  async findOneByEmail(email: string): Promise<Partial<User> | null> {
+    return await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        password: true,
+      },
+    });
+  }
+  async findAll(): Promise<User[]> {
+    return await this.prisma.user.findMany();
+  }
 
-    return query.getOne();
+  async findById(id: string): Promise<User | null> {
+    return await this.prisma.user.findUnique({
+      where: { id },
+    });
+  }
+
+  async update(id: string, data: Partial<CreateUserDto>): Promise<User> {
+    return await this.prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async delete(id: string): Promise<User> {
+    return await this.prisma.user.delete({
+      where: { id },
+    });
+  }
+  async deleteByEmail(email: string): Promise<User> {
+    return await this.prisma.user.delete({
+      where: { email },
+    });
   }
 }

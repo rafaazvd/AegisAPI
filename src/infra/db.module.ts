@@ -1,24 +1,14 @@
-import { DataSource } from 'typeorm';
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import {
-  addTransactionalDataSource,
-  getDataSourceByName,
-} from 'typeorm-transactional';
+import { Global, Module } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
 
-import { typeOrmModuleOptions } from './data.source';
-
+@Global()
 @Module({
-  imports: [
-    TypeOrmModule.forRootAsync({
-      useFactory: () => typeOrmModuleOptions,
-      async dataSourceFactory(options) {
-        return (
-          getDataSourceByName('default') ||
-          addTransactionalDataSource(new DataSource(options))
-        );
-      },
-    }),
+  providers: [
+    {
+      provide: PrismaClient,
+      useValue: new PrismaClient(),
+    },
   ],
+  exports: [PrismaClient],
 })
-export class DbModule {}
+export class PrismaModule {}

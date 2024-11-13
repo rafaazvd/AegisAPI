@@ -2,19 +2,20 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './entities/user.entity';
 import { AuthGuard } from './auth.guard';
 import { JwtModule } from '@nestjs/jwt';
 import { UserRepository } from './user.repository';
 import { APP_GUARD } from '@nestjs/core';
+import { PrismaModule } from '../infra/db.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([User]),
+    PrismaModule,
+    EmailModule,
     JwtModule.registerAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule, PrismaModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         global: true,
